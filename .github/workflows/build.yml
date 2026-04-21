@@ -27,7 +27,7 @@ jobs:
 
       - name: Initialize Flutter Project
         run: |
-          # إنشاء مشروع جديد
+          # إنشاء مشروع جديد نظيف
           flutter create --project-name bridge_android --org app.bridge --platforms=android --overwrite .
           
           # استبدال ملفات الإعداد بالملفات المخصصة
@@ -37,20 +37,61 @@ jobs:
           mkdir -p android/app/src/main
           cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
           
-          # تحديث إصدار Kotlin في settings.gradle (للمشاريع الحديثة)
-          if [ -f android/settings.gradle ]; then
-            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
-          fi
-          
-          # تحديث إصدار Kotlin في build.gradle (للمشاريع الأقدم)
-          if [ -f android/build.gradle ]; then
-            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/' android/build.gradle
-          fi
+          # تعديل ملف android/settings.gradle بشكل جذري لضمان إصدار Kotlin
+          cat > android/settings.gradle <<EOF
+          pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream { properties.load(it) }
+                  def flutterSdkPath = properties.getProperty("flutter.sdk")
+                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  return flutterSdkPath
+              }()
 
-          # تحديث إصدار Gradle Plugin ليتوافق مع Java 17 و Kotlin 1.9.24
-          if [ -f android/build.gradle ]; then
-            sed -i 's/com.android.tools.build:gradle:[^"]*/com.android.tools.build:gradle:8.1.0/' android/build.gradle
-          fi
+              includeBuild("\$flutterSdkPath/packages/flutter_tools/gradle")
+
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          plugins {
+              id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
+              id "com.android.application" version "8.1.0" apply false
+              id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+          }
+
+          include ":app"
+          EOF
+
+          # تعديل ملف android/build.gradle لضمان التوافق
+          cat > android/build.gradle <<EOF
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.buildDir = "../build"
+          subprojects {
+              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
+          }
+          subprojects {
+              project.evaluationDependsOn(":app")
+          }
+
+          tasks.register("clean", Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+
+          # تعديل ملف android/app/build.gradle لضبط minSdkVersion و targetSdkVersion
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
 
       - name: Get Dependencies
         run: flutter pub get
@@ -70,7 +111,7 @@ jobs:
         with:
           tag_name: latest
           name: "Bridge Android — Latest"
-          body: "تم إصلاح أخطاء البناء وتحديث إصدار Kotlin و Gradle. حمّل bridge-android-latest.apk وثبّته على جهازك."
+          body: "تم إصلاح أخطاء التوافق بشكل نهائي وتحديث إصدارات Kotlin و Gradle. حمّل bridge-android-latest.apk وثبّته على جهازك."
           files: release_assets/bridge-android-latest.apk
           prerelease: false
           make_latest: true
