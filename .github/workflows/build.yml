@@ -11,7 +11,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+14        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,10 +34,10 @@ jobs:
           cp pubspec.yaml.custom pubspec.yaml
           mkdir -p lib
           cp main.dart.custom lib/main.dart
+          mkdir -p android/app/src/main
           cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
           
           # تحديث إصدار Kotlin في settings.gradle (للمشاريع الحديثة)
-          # سنستخدم 1.9.24 وهو إصدار مستقر جداً مع Flutter 3.24
           if [ -f android/settings.gradle ]; then
             sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
           fi
@@ -45,6 +45,11 @@ jobs:
           # تحديث إصدار Kotlin في build.gradle (للمشاريع الأقدم)
           if [ -f android/build.gradle ]; then
             sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/' android/build.gradle
+          fi
+
+          # تحديث إصدار Gradle Plugin ليتوافق مع Java 17 و Kotlin 1.9.24
+          if [ -f android/build.gradle ]; then
+            sed -i 's/com.android.tools.build:gradle:[^"]*/com.android.tools.build:gradle:8.1.0/' android/build.gradle
           fi
 
       - name: Get Dependencies
@@ -65,7 +70,7 @@ jobs:
         with:
           tag_name: latest
           name: "Bridge Android — Latest"
-          body: "تم إصلاح أخطاء البناء وتحديث إصدار Kotlin. حمّل bridge-android-latest.apk وثبّته على جهازك."
+          body: "تم إصلاح أخطاء البناء وتحديث إصدار Kotlin و Gradle. حمّل bridge-android-latest.apk وثبّته على جهازك."
           files: release_assets/bridge-android-latest.apk
           prerelease: false
           make_latest: true
