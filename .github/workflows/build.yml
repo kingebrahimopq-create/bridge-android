@@ -27,8 +27,8 @@ jobs:
 
       - name: Initialize Flutter Project
         run: |
-          # إنشاء مشروع جديد نظيف
-          flutter create --project-name bridge_android --org app.bridge --platforms=android --overwrite .
+          # إنشاء مشروع جديد نظيف بلغة Java لتجنب مشاكل Kotlin
+          flutter create --project-name bridge_android --org app.bridge --platforms=android -a java --overwrite .
           
           # استبدال ملفات الإعداد بالملفات المخصصة
           cp pubspec.yaml.custom pubspec.yaml
@@ -37,18 +37,22 @@ jobs:
           mkdir -p android/app/src/main
           cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
           
-          # إصلاح MainActivity.kt لضمان التوافق مع FlutterActivity وتجنب Unresolved reference
-          mkdir -p android/app/src/main/kotlin/app/bridge/bridge_android
-          cat > android/app/src/main/kotlin/app/bridge/bridge_android/MainActivity.kt <<EOF
-          package app.bridge.bridge_android
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity()
+          # حذف أي ملفات Kotlin قد تكون موجودة
+          rm -rf android/app/src/main/kotlin
+          
+          # التأكد من وجود MainActivity.java الصحيح
+          mkdir -p android/app/src/main/java/app/bridge/bridge_android
+          cat > android/app/src/main/java/app/bridge/bridge_android/MainActivity.java <<EOF
+          package app.bridge.bridge_android;
+          import io.flutter.embedding.android.FlutterActivity;
+          public class MainActivity extends FlutterActivity {
+          }
           EOF
 
           # إعداد local.properties
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
 
-          # كتابة settings.gradle متوافق مع Flutter 3.24
+          # كتابة settings.gradle متوافق
           cat > android/settings.gradle <<'EOF'
           pluginManagement {
               def properties = new Properties()
@@ -130,7 +134,7 @@ jobs:
         with:
           tag_name: latest
           name: "Bridge Android — Latest"
-          body: "تم إصلاح أخطاء التوافق (MainActivity و Gradle) بشكل نهائي. حمّل bridge-android-latest.apk وثبّته."
+          body: "تم إصلاح أخطاء التوافق بشكل نهائي باستخدام Java Activity لضمان استقرار البناء. حمّل bridge-android-latest.apk وثبّته."
           files: release_assets/bridge-android-latest.apk
           prerelease: false
           make_latest: true
