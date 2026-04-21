@@ -36,17 +36,24 @@ jobs:
           cp main.dart.custom lib/main.dart
           cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
           
-          # إصلاح إصدار Kotlin Gradle Plugin في settings.gradle (للمشاريع الحديثة)
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.20"/' android/settings.gradle
+          # تحديث إصدار Kotlin في settings.gradle (للمشاريع الحديثة)
+          # سنستخدم 1.9.24 وهو إصدار مستقر جداً مع Flutter 3.24
+          if [ -f android/settings.gradle ]; then
+            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
+          fi
           
-          # تأكيد الإصدار في build.gradle (للمشاريع الأقدم إذا لزم الأمر)
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.20"/' android/build.gradle || true
+          # تحديث إصدار Kotlin في build.gradle (للمشاريع الأقدم)
+          if [ -f android/build.gradle ]; then
+            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/' android/build.gradle
+          fi
 
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+      - name: Clean and Build APK
+        run: |
+          flutter clean
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK for Release
         run: |
@@ -58,7 +65,7 @@ jobs:
         with:
           tag_name: latest
           name: "Bridge Android — Latest"
-          body: "حمّل bridge-android-latest.apk وثبّته على جهازك"
+          body: "تم إصلاح أخطاء البناء وتحديث إصدار Kotlin. حمّل bridge-android-latest.apk وثبّته على جهازك."
           files: release_assets/bridge-android-latest.apk
           prerelease: false
           make_latest: true
