@@ -27,18 +27,20 @@ jobs:
 
       - name: Initialize Flutter Project
         run: |
-          # إنشاء مشروع جديد في المجلد الحالي مع تجاوز الملفات الموجودة
+          # إنشاء مشروع جديد
           flutter create --project-name bridge_android --org app.bridge --platforms=android --overwrite .
           
           # استبدال ملفات الإعداد بالملفات المخصصة
           cp pubspec.yaml.custom pubspec.yaml
-          
-          # التأكد من وجود مجلد lib ووضع ملف main.dart فيه
           mkdir -p lib
           cp main.dart.custom lib/main.dart
-          
-          # استبدال AndroidManifest.xml في المسار الصحيح لنظام أندرويد
           cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
+          
+          # إصلاح إصدار Kotlin Gradle Plugin في settings.gradle (للمشاريع الحديثة)
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.20"/' android/settings.gradle
+          
+          # تأكيد الإصدار في build.gradle (للمشاريع الأقدم إذا لزم الأمر)
+          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.20"/' android/build.gradle || true
 
       - name: Get Dependencies
         run: flutter pub get
