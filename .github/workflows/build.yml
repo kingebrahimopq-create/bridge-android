@@ -93,6 +93,11 @@ jobs:
           sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
           sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
 
+          # ترقية Gradle Wrapper إلى إصدار 8.0 ليتوافق مع AGP 8.1.0
+          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            sed -i 's/gradle-7.6.3-all.zip/gradle-8.0-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          fi
+
       - name: Get Dependencies
         run: flutter pub get
 
@@ -111,7 +116,7 @@ jobs:
         with:
           tag_name: latest
           name: "Bridge Android — Latest"
-          body: "تم إصلاح أخطاء التوافق بشكل نهائي وتحديث إصدارات Kotlin و Gradle. حمّل bridge-android-latest.apk وثبّته على جهازك."
+          body: "تم إصلاح أخطاء التوافق بشكل نهائي وتحديث إصدارات Kotlin و Gradle و Gradle Wrapper. حمّل bridge-android-latest.apk وثبّته على جهازك."
           files: release_assets/bridge-android-latest.apk
           prerelease: false
           make_latest: true
