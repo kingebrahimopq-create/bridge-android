@@ -59,8 +59,8 @@ jobs:
 
           plugins {
               id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
-              id "com.android.application" version "8.1.0" apply false
-              id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+              id "com.android.application" version "8.2.1" apply false
+              id "org.jetbrains.kotlin.android" version "1.9.22" apply false
           }
 
           include ":app"
@@ -89,13 +89,13 @@ jobs:
           EOF
 
           # تعديل ملف android/app/build.gradle لضبط minSdkVersion و targetSdkVersion
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
+          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle
+          sed -i 's/targetSdk = .*/targetSdk = 34/' android/app/build.gradle
+          sed -i 's/compileSdk = .*/compileSdk = 34/' android/app/build.gradle
 
-          # ترقية Gradle Wrapper إلى إصدار 8.0 ليتوافق مع AGP 8.1.0
+          # ترقية Gradle Wrapper إلى إصدار 8.2 ليتوافق مع AGP 8.2.1
           if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
-            sed -i 's/gradle-7.6.3-all.zip/gradle-8.0-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+            sed -i 's/gradle-.*-all.zip/gradle-8.2-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
           fi
 
       - name: Get Dependencies
