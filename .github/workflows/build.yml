@@ -1,0 +1,39 @@
+name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - name: Create Flutter project
+        run: |
+          flutter create --project-name bridge_android --org app.bridge --platforms=android --overwrite .
+          cp pubspec.yaml.custom pubspec.yaml
+          mkdir -p lib
+          cp main.dart.custom lib/main.dart
+          cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
+      - run: flutter pub get
+      - run: flutter build apk --release --no-tree-shake-icons
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Bridge Android — Latest"
+          body: "حمّل bridge-android.apk وثبّته على جهازك"
+          files: build/app/outputs/flutter-apk/app-release.apk
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
