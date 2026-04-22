@@ -25,118 +25,35 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Initialize Flutter Project
+      - name: Create Android project
         run: |
-          # إنشاء مشروع جديد نظيف بلغة Java لتجنب مشاكل Kotlin
-          flutter create --project-name bridge_android --org app.bridge --platforms=android -a java --overwrite .
-          
-          # استبدال ملفات الإعداد بالملفات المخصصة
-          cp pubspec.yaml.custom pubspec.yaml
-          mkdir -p lib
-          cp main.dart.custom lib/main.dart
-          mkdir -p android/app/src/main
-          cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
-          
-          # حذف أي ملفات Kotlin قد تكون موجودة
-          rm -rf android/app/src/main/kotlin
-          
-          # التأكد من وجود MainActivity.java الصحيح
-          mkdir -p android/app/src/main/java/app/bridge/bridge_android
-          cat > android/app/src/main/java/app/bridge/bridge_android/MainActivity.java <<EOF
-          package app.bridge.bridge_android;
-          import io.flutter.embedding.android.FlutterActivity;
-          public class MainActivity extends FlutterActivity {
-          }
-          EOF
-
-          # إعداد local.properties
-          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-
-          # كتابة settings.gradle متوافق
-          cat > android/settings.gradle <<'EOF'
-          pluginManagement {
-              def properties = new Properties()
-              if (file("local.properties").exists()) {
-                  file("local.properties").withInputStream { properties.load(it) }
-              }
-              def flutterSdkPath = properties.getProperty("flutter.sdk")
-              if (flutterSdkPath == null || flutterSdkPath.trim() == "") {
-                  flutterSdkPath = System.getenv("FLUTTER_ROOT")
-              }
-              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
-
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          plugins {
-              id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
-              id "com.android.application" version "8.2.1" apply false
-              id "org.jetbrains.kotlin.android" version "1.9.22" apply false
-          }
-
-          include ":app"
-          EOF
-
-          # كتابة build.gradle الرئيسي
-          cat > android/build.gradle <<EOF
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-
-          rootProject.buildDir = "../build"
-          subprojects {
-              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-          }
-          subprojects {
-              project.evaluationDependsOn(":app")
-          }
-
-          tasks.register("clean", Delete) {
-              delete rootProject.buildDir
-          }
-          EOF
-
-          # تعديل android/app/build.gradle لضبط الإصدارات
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
-          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle
-          sed -i 's/targetSdk = .*/targetSdk = 34/' android/app/build.gradle
-          sed -i 's/compileSdk = .*/compileSdk = 34/' android/app/build.gradle
-
-          # تحديث Gradle Wrapper
-          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
-            sed -i 's/gradle-.*-all.zip/gradle-8.2-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
-          fi
+          flutter create --project-name bridge_android --org app.bridge --platforms=android -a java .
+          # Restore our files that flutter create may overwrite
+          git checkout -- pubspec.yaml lib/main.dart
 
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Clean and Build APK
+      - name: Set min SDK and permissions
         run: |
-          flutter clean
-          flutter build apk --release --no-tree-shake-icons
+          # Update minSdkVersion to 21
+          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle.kts 2>/dev/null || \
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle 2>/dev/null || true
+          
+          # Copy custom manifest if exists
+          if [ -f AndroidManifest.xml.custom ]; then
+            cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
+          fi
 
-      - name: Rename APK for Release
-        run: |
-          mkdir -p release_assets
-          cp build/app/outputs/flutter-apk/app-release.apk release_assets/bridge-android-latest.apk
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: "Bridge Android — Latest"
-          body: "تم إصلاح أخطاء التوافق بشكل نهائي باستخدام Java Activity لضمان استقرار البناء. حمّل bridge-android-latest.apk وثبّته."
-          files: release_assets/bridge-android-latest.apk
-          prerelease: false
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Bridge Android v1.0.${{ github.run_number }}"
+          files: build/app/outputs/flutter-apk/app-release.apk
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
