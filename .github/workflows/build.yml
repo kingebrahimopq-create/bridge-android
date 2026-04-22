@@ -22,25 +22,30 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.27.4'
           channel: 'stable'
 
-      - name: Create Android project
+      - name: Create Android scaffold
         run: |
-          flutter create --project-name bridge_android --org app.bridge --platforms=android -a java .
-          # Restore our files that flutter create may overwrite
+          # Generate Android project scaffold (keeps our pubspec.yaml and lib/)
+          flutter create --project-name bridge_android --org app.bridge --platforms=android .
+          # Restore our source files
           git checkout -- pubspec.yaml lib/main.dart
-
+          
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Set min SDK and permissions
+      - name: Set min SDK
         run: |
-          # Update minSdkVersion to 21
-          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle.kts 2>/dev/null || \
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle 2>/dev/null || true
+          # Handle both Groovy and Kotlin DSL
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
+            sed -i 's/minSdk .*/minSdk = 21/' android/app/build.gradle
+          fi
           
-          # Copy custom manifest if exists
+          # Copy custom manifest
           if [ -f AndroidManifest.xml.custom ]; then
             cp AndroidManifest.xml.custom android/app/src/main/AndroidManifest.xml
           fi
