@@ -1,0 +1,23 @@
+name: bridge_android
+description: Bridge — auto-sync photos and files
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  mobile_scanner: ^5.0.0
+  permission_handler: ^11.3.0
+  photo_manager: ^3.2.0
+  shared_preferences: ^2.2.2
+  workmanager: ^0.5.2
+  path: ^1.9.0
+  crypto: ^3.0.3
+
+flutter:
+  uses-material-design: true
