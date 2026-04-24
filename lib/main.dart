@@ -10,6 +10,8 @@ import 'package:workmanager/workmanager.dart';
 
 const String SUPABASE_URL = 'https://kthwtmfntujribetqjir.supabase.co';
 const String SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0aHd0bWZudHVqcmliZXRxamlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODcyMTgsImV4cCI6MjA5MjE2MzIxOH0.CLx0lIJC2hx5fBK_ZZc-yxzN8Ycer665xNF8vDdxGSA';
+// New TanStack server route for actual file upload (binary)
+const String UPLOAD_API = 'https://your-data-courier.lovable.app/api/public/upload';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -152,6 +154,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
 }
 
 class SyncService {
+  static const int MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+
   static Future<int> syncNewPhotos() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString('pairing_code');
@@ -168,19 +172,26 @@ class SyncService {
     for (final asset in newAssets) {
       final file = await asset.file;
       if (file == null) continue;
+      final size = await file.length();
+      if (size > MAX_FILE_BYTES) continue;
       if (await _uploadFile(code, file, asset.title ?? 'photo.jpg')) uploaded++;
     }
     if (newAssets.isNotEmpty) await prefs.setInt('last_sync_millis', DateTime.now().millisecondsSinceEpoch);
     return uploaded;
   }
 
+  // Upload the actual file binary via the new TanStack server route.
   static Future<bool> _uploadFile(String code, File file, String name) async {
     try {
-      final size = await file.length();
-      final resp = await http.post(Uri.parse('$SUPABASE_URL/rest/v1/rpc/add_sync_item_by_code'),
-        headers: {'apikey': SUPABASE_ANON, 'Authorization': 'Bearer $SUPABASE_ANON', 'Content-Type': 'application/json'},
-        body: '{"_code":"$code","_item_type":"photo","_title":"$name","_size_bytes":$size,"_metadata":{"source":"android-native"}}');
-      return resp.statusCode == 200;
-    } catch (_) { return false; }
+      final req = http.MultipartRequest('POST', Uri.parse(UPLOAD_API));
+      req.headers['X-Pairing-Code'] = code;
+      req.fields['item_type'] = 'photo';
+      req.files.add(await http.MultipartFile.fromPath('file', file.path, filename: name));
+      final streamed = await req.send().timeout(const Duration(minutes: 5));
+      final resp = await http.Response.fromStream(streamed);
+      return resp.statusCode >= 200 && resp.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
   }
 }
