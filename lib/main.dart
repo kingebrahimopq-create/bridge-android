@@ -7,22 +7,31 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-const String SUPABASE_URL = 'https://kthwtmfntujribetqjir.supabase.co';
-const String SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0aHd0bWZudHVqcmliZXRxamlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODcyMTgsImV4cCI6MjA5MjE2MzIxOH0.CLx0lIJC2hx5fBK_ZZc-yxzN8Ycer665xNF8vDdxGSA';
-// New TanStack server route for actual file upload (binary)
+// تم نقل المفاتيح السرية إلى ملف .env للأمان
+final String SUPABASE_URL = dotenv.env['SUPABASE_URL'] ?? 'https://kthwtmfntujribetqjir.supabase.co';
+final String SUPABASE_ANON = dotenv.env['SUPABASE_ANON'] ?? '';
 const String UPLOAD_API = 'https://your-data-courier.lovable.app/api/public/upload';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    try { await SyncService.syncNewPhotos(); } catch (_) {}
+    try { 
+      await dotenv.load(fileName: ".env");
+      await SyncService.syncNewPhotos(); 
+    } catch (_) {}
     return Future.value(true);
   });
 }
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (_) {
+    // تجاهل إذا لم يكن الملف موجوداً حالياً
+  }
   Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
   runApp(const BridgeApp());
 }
@@ -180,7 +189,6 @@ class SyncService {
     return uploaded;
   }
 
-  // Upload the actual file binary via the new TanStack server route.
   static Future<bool> _uploadFile(String code, File file, String name) async {
     try {
       final req = http.MultipartRequest('POST', Uri.parse(UPLOAD_API));
